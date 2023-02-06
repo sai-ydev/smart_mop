@@ -1,16 +1,16 @@
 /*****************************************************************************
 * File Name: main.h
 *
-* Version: 1.0
+* Version: 1.00
 *
-* Description:
-* This file defines the commonly used macros for this project.
+* Description: Demonstrates Liquid Level Sensing (LLS) using CapSense CSD with 12 sensors.
 *
-* Hardware Dependency:
-* CY8CKIT-042 BLE Pioneer Kit
+* Related Document: Code example CE202479
+*
+* Hardware Dependency: See code example CE202479
 *
 ******************************************************************************
-* Copyright (2014), Cypress Semiconductor Corporation.
+* Copyright (2015), Cypress Semiconductor Corporation.
 ******************************************************************************
 * This software is owned by Cypress Semiconductor Corporation (Cypress) and is
 * protected by and subject to worldwide patent protection (United States and
@@ -37,16 +37,26 @@
 * such use and in doing so indemnifies Cypress against all charges. Use may be
 * limited by and subject to the applicable Cypress software license agreement.
 *****************************************************************************/
-
-#if !defined(_MAIN_H)
-#define _MAIN_H
-
-/*****************************************************************************
-* Included headers
-*****************************************************************************/
 #include <project.h>
+#include <BLEApplications.h>
 #include "CyFlash.h"
 
+
+/* Function prototypes */
+cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 byteCount);
+
+/* Project Constants */
+/* CapSense tuning constants */
+#define SENSOR_MODDAC       (150u)          /* Modulation DAC current setting */
+#define SENSOR_CMPDAC       (20u)           /* Compensation DAC current setting */
+#define SENSOR_SENDIV       (9u)          /* Sensor clock divider */
+#define SENSOR_MODDIV       (9u)          /* Modulation clock divider */
+/* Liquid Level constants */
+#define NUMSENSORS          (12u)          /* Number of CapSense sensors */
+#define SENSORMAX           (600u)         /* Maximum difference count of each calibrated sensor at full level */
+#define SENSORLIMIT         (SENSORMAX / 2) /* Threshold for determining if a sensor is submerged. Set to half of SENSORMAX value */
+#define LEVELMM_MAX         (153u)         /* Max sensor height in mm */
+#define SENSORHEIGHT        ((LEVELMM_MAX * 256) / (NUMSENSORS - 1)) /* Height of a single sensor. Fixed precision 24.8 */
 /*****************************************************************************
 * Macros 
 *****************************************************************************/
@@ -69,23 +79,6 @@
 #define RGB_LED_MAX_VAL					(255)
 #define RGB_LED_OFF						(255)
 #define RGB_LED_ON						(0)
-    
-/* Function prototypes */
-cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 byteCount);
-
-/* Project Constants */
-/* CapSense tuning constants */
-#define SENSOR_MODDAC       (5u)          /* Modulation DAC current setting */
-#define SENSOR_CMPDAC       (0u)           /* Compensation DAC current setting */
-#define SENSOR_SENDIV       (9u)          /* Sensor clock divider */
-#define SENSOR_MODDIV       (9u)          /* Modulation clock divider */
-/* Liquid Level constants */
-#define NUMSENSORS          (12u)          /* Number of CapSense sensors */
-#define SENSORMAX           (600u)         /* Maximum difference count of each calibrated sensor at full level */
-#define SENSORLIMIT         (SENSORMAX / 2) /* Threshold for determining if a sensor is submerged. Set to half of SENSORMAX value */
-#define LEVELMM_MAX         (153u)         /* Max sensor height in mm */
-#define SENSORHEIGHT        ((LEVELMM_MAX * 256) / (NUMSENSORS - 1)) /* Height of a single sensor. Fixed precision 24.8 */
-
 /* EEPROM constants */
 #define Em_EEPROM_FLASH_BASE_ADDR        (CYDEV_FLASH_BASE)
 #define Em_EEPROM_FLASH_SIZE             (CYDEV_FLASH_SIZE)
@@ -94,6 +87,5 @@ cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 b
 
 
 
-#endif  /* #if !defined(_MAIN_H) */
 
 /* [] END OF FILE */

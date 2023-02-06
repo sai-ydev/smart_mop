@@ -106,17 +106,17 @@ void StoreCalibration(void)
 /* refer to the CapSense component datasheet and the PSoC 4 CapSense Tuning Guide document. */
 void ProcessUprobe(void)
 {
-    //uint8 i;
+    uint8 i;
     
     /* Update CapSense scan settings from uProbe*/
-    /*for(i = 0; i < NUMSENSORS; i++)
+    for(i = 0; i < NUMSENSORS; i++)
     {
         CapSense_CSD_SetSenseClkDivider(i, senseDivider);
-        modDivider = senseDivider;     
+        modDivider = senseDivider;      /* Divider values should be the same */
         CapSense_CSD_SetModulatorClkDivider(i, modDivider);
         CapSense_CSD_SetModulationIDAC(i, modDac);
         CapSense_CSD_SetCompensationIDAC(i, compDac[i]);
-    }*/
+    }
         
 }
 
@@ -130,7 +130,7 @@ void InitialUartMessage(void)
     UART_UartPutString("-- Liquid Level Sensing Example Project --\n\r");
     UART_UartPutString("CSD 12RX - Version 1.0 \n\r");
     CalUartCommands();
-    //CalUartMessage();
+    CalUartMessage();
 }
 
 
