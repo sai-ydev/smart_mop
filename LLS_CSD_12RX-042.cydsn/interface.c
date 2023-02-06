@@ -89,7 +89,7 @@ void StoreCalibration(void)
     CalUartMessage();
     
     /* Store new cal values */
-    status = Em_EEPROM_Write((uint8 *)sensorEmptyOffset, (uint8 *)eepromEmptyOffset, 6u);
+    status = Em_EEPROM_Write((uint8 *)sensorEmptyOffset, (uint8 *)eepromEmptyOffset, sizeof *sensorEmptyOffset * NUMSENSORS);
     if (CYRET_SUCCESS != status)
     {
         /* EEPROM Error handler */   

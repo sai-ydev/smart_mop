@@ -53,11 +53,12 @@ uint8 modDivider = SENSOR_MODDIV;           /* Modulation clock divider */
 int32 sensorRaw[NUMSENSORS] = {0u};         /* Sensor raw counts */
 int32 sensorDiff[NUMSENSORS] = {0u};        /* Sensor difference counts */
 int16 sensorEmptyOffset[NUMSENSORS] = {0u}; /* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
-const int16 CYCODE eepromEmptyOffset[] = {0u};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
+const int16 CYCODE eepromEmptyOffset[NUMSENSORS] = {0u};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
 int16 sensorScale[NUMSENSORS] = {0x01D0, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x01C0}; /* Scaling factor to normalize sensor full scale counts. 0x0100 = 1.0 in fixed precision 8.8 */
 int32 sensorProcessed[NUMSENSORS] = {0u, 0u}; /* fixed precision 24.8 */
 uint16 sensorLimit = SENSORLIMIT;           /* Threshold for determining if a sensor is submerged. Set to half of SENSORMAX value */
 uint8 sensorActiveCount = 0u;               /* Number of sensors currently submerged */
+int32 previousLevelPercent = 0u;
 int32 levelPercent = 0u;                    /* fixed precision 24.8 */
 int32 levelMm = 0u;                         /* fixed precision 24.8 */   
 int32 sensorHeight = SENSORHEIGHT;          /* Height of a single sensor. Fixed precision 24.8 */
@@ -66,7 +67,7 @@ uint8 calFlag = FALSE;                      /* Flag to signal when new sensor ca
 uint16 delayMs = UART_DELAY;                /* Main loop delay in ms to control UART data log output speed */
 
 static void InitializeSystem(void);
-static void HandleCapSenseSlider(void);
+
 
 int main()
 {   
@@ -89,7 +90,11 @@ int main()
 			if(TRUE == sendCapSenseSliderNotifications)
 			{
 				/* Check for CapSense slider swipe and send data accordingly */
-				SendCapSenseNotification(levelPercent);
+                if(levelPercent != previousLevelPercent)
+                {
+                    previousLevelPercent = levelPercent;
+                    SendCapSenseNotification(levelPercent);
+                }
 			}
 		}
 
@@ -201,9 +206,6 @@ void InitializeSystem(void)
     
 }
 
-void HandleCapSenseSlider(void)
-{
-    
-}
+
 /* [] END OF FILE */
 

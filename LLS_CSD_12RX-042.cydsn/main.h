@@ -68,10 +68,6 @@ cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 b
 #define BLUE_INDEX						(2)
 #define INTENSITY_INDEX					(3)
 
-#define NO_FINGER 						(0xFFFFu)
-
-#define SLIDER_MAX_VALUE				(0x0064)
-
 #define TRUE							(1)
 #define FALSE							(0)
 #define ZERO							(0)
