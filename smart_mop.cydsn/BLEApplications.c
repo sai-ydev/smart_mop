@@ -122,12 +122,7 @@ void CustomEventHandler(uint32 event, void * eventParam)
 			/* Reset the CCCD value to disable notifications */
 			updateNotificationCCCAttribute = TRUE;
 			
-			/* Reset the color coordinates */
-			RGBledData[RED_INDEX] = ZERO;
-            RGBledData[GREEN_INDEX] = ZERO;
-            RGBledData[BLUE_INDEX] = ZERO;
-            RGBledData[INTENSITY_INDEX] = ZERO;
-			UpdateRGBled();
+			
 
 			break;
         
@@ -147,24 +142,7 @@ void CustomEventHandler(uint32 event, void * eventParam)
              * attribute is extracted and used to drive RGB LED.
              */
             
-            /* ADD_CODE to extract the attribute handle for the RGB LED 
-             * characteristic from the custom service data structure.
-             */
-            if(wrReqParam->handleValPair.attrHandle == cyBle_customs[RGB_LED_SERVICE_INDEX].\
-								customServiceInfo[RGB_LED_CHAR_INDEX].customServiceCharHandle)
-            {
-                /* ADD_CODE to extract the value of the attribute from 
-                 * the handle-value pair database. */
-                RGBledData[RED_INDEX] = wrReqParam->handleValPair.value.val[RED_INDEX];
-                RGBledData[GREEN_INDEX] = wrReqParam->handleValPair.value.val[GREEN_INDEX];
-                RGBledData[BLUE_INDEX] = wrReqParam->handleValPair.value.val[BLUE_INDEX];
-                RGBledData[INTENSITY_INDEX] = wrReqParam->handleValPair.value.val[INTENSITY_INDEX];
-                
-                /* Update the PrISM components and the attribute for RGB LED read 
-                 * characteristics */
-                UpdateRGBled();
-            }
-
+            
             
             /* This condition checks whether the CCCD descriptor for CapSense
              * slider characteristic has been written to. This tells us whether
@@ -222,47 +200,7 @@ void SendCapSenseNotification(uint8 CapSenseSliderData)
 }
 
 
-/*******************************************************************************
-* Function Name: UpdateRGBled
-********************************************************************************
-* Summary:
-* Receive the new RGB data and modify PrISM parameters. Also, update the
-* read characteristic handle so that the next read from the BLE central device
-* gives present RGB color and intensity data.
-*
-* Parameters:
-*  void
-*
-* Return:
-*  void
-*
-*******************************************************************************/
-void UpdateRGBled(void)
-{
-	/* Local variables to calculate the color components from RGB received data*/
-	uint8 debug_red;
-	uint8 debug_green;
-	uint8 debug_blue;
-	uint8 intensity_divide_value = RGBledData[INTENSITY_INDEX];
-	
-	debug_red = (uint8)(((uint16)RGBledData[RED_INDEX] * intensity_divide_value) / 255);
-	debug_green = (uint8)(((uint16)RGBledData[GREEN_INDEX] * intensity_divide_value) / 255);
-	debug_blue = (uint8)(((uint16)RGBledData[BLUE_INDEX] * intensity_divide_value) / 255);
-	
-	/* Update the density value of the PrISM module for color control*/
-	PRS_1_WritePulse0(RGB_LED_MAX_VAL - debug_red);
-    PRS_1_WritePulse1(RGB_LED_MAX_VAL - debug_green);
-    PRS_2_WritePulse0(RGB_LED_MAX_VAL - debug_blue);
-	
-	/* Update RGB control handle with new values */
-	rgbHandle.attrHandle = RGB_LED_CHAR_HANDLE;
-	rgbHandle.value.val = RGBledData;
-	rgbHandle.value.len = RGB_CHAR_DATA_LEN;
-	rgbHandle.value.actualLen = RGB_CHAR_DATA_LEN;
-	
-	/* Send updated RGB control handle as attribute for read by central device */
-	CyBle_GattsWriteAttributeValue(&rgbHandle, FALSE, &cyBle_connHandle, FALSE);  
-}
+
 
 
 /*******************************************************************************

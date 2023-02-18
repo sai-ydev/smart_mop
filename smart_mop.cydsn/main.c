@@ -53,7 +53,7 @@ uint8 modDivider = SENSOR_MODDIV;           /* Modulation clock divider */
 int32 sensorRaw[NUMSENSORS] = {0u};         /* Sensor raw counts */
 int32 sensorDiff[NUMSENSORS] = {0u};        /* Sensor difference counts */
 int16 sensorEmptyOffset[NUMSENSORS] = {0u}; /* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
-const int16 CYCODE eepromEmptyOffset[NUMSENSORS] = {0u};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
+const int16 CYCODE eepromEmptyOffset[NUMSENSORS] = {0,1416,1728,2568,2656,1883,1888,1812,1915,2034,2095,896};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
 int16 sensorScale[NUMSENSORS] = {0x01D0, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x01C0}; /* Scaling factor to normalize sensor full scale counts. 0x0100 = 1.0 in fixed precision 8.8 */
 int32 sensorProcessed[NUMSENSORS] = {0u, 0u}; /* fixed precision 24.8 */
 uint16 sensorLimit = SENSORLIMIT;           /* Threshold for determining if a sensor is submerged. Set to half of SENSORMAX value */
@@ -93,7 +93,7 @@ int main()
                 if(levelPercent != previousLevelPercent)
                 {
                     previousLevelPercent = levelPercent;
-                    SendCapSenseNotification(levelPercent);
+                    SendCapSenseNotification(levelPercent>>8);
                 }
 			}
 		}
@@ -182,22 +182,7 @@ void InitializeSystem(void)
     {
         sensorEmptyOffset[i] = eepromEmptyOffset[i];
     }
-    
-	/* Start both the PrISM components for LED control*/
-    PRS_1_Start();
-    PRS_2_Start();
-	
-	/* The RGB LED on BLE Pioneer kit are active low. Drive HIGH on 
-	 * pin for OFF and drive LOW on pin for ON*/
-	PRS_1_WritePulse0(RGB_LED_OFF);
-	PRS_1_WritePulse1(RGB_LED_OFF);
-	PRS_2_WritePulse0(RGB_LED_OFF);
-	
-	/* Set Drive mode of output pins from HiZ to Strong */
-	RED_SetDriveMode(RED_DM_STRONG);
-	GREEN_SetDriveMode(GREEN_DM_STRONG);
-	BLUE_SetDriveMode(BLUE_DM_STRONG);
-	
+    	
 	/* ADD_CODE to initialize CapSense component and initialize baselines*/
 	CapSense_CSD_Start();
 	CapSense_CSD_ScanEnabledWidgets();
