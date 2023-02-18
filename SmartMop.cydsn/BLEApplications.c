@@ -48,17 +48,13 @@
 /*****************************************************************************
 * Static variables 
 *****************************************************************************/
-
-/* 'rgbHandle' stores RGB control data parameters */
-CYBLE_GATT_HANDLE_VALUE_PAIR_T		rgbHandle;	
+	
 
 /*This flag is set when the Central device writes to CCC (Client Characteristic 
 * Configuration) of the CapSense slider Characteristic to enable notifications */
 uint8 sendCapSenseSliderNotifications = FALSE;	
 
-/* Array to store the present RGB LED control data. The 4 bytes 
-* of the array represents {R, G, B, Intensity} */
-uint8 RGBledData[RGB_CHAR_DATA_LEN];
+
 
 /* This flag is used by application to know whether a Central 
 * device has been connected. This is updated in BLE event callback 
