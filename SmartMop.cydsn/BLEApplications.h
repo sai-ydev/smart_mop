@@ -50,8 +50,12 @@
 /*****************************************************************************
 * Macros 
 *****************************************************************************/
+#define CONN_PARAM_UPDATE_MIN_CONN_INTERVAL 0x64 //Minimum connection interval
+#define CONN_PARAM_UPDATE_MAX_CONN_INTERVAL 0x6E //Maximum connection interval
+#define CONN_PARAM_UPDATE_SLAVE_LATENCY 0x00 //Slave latency
+#define CONN_PARAM_UPDATE_SUPRV_TIMEOUT 0xC8 //Supervision timeout
 #define CAPSENSE_SERVICE_INDEX          (0x00)
-#define RGB_LED_SERVICE_INDEX           (0x01)
+
 
 #define CAPSENSE_SLIDER_CHAR_INDEX      (0x00)
 #define RGB_LED_CHAR_INDEX              (0x00)
@@ -91,6 +95,7 @@ extern uint8 sendCapSenseSliderNotifications;
 *****************************************************************************/
 void CustomEventHandler(uint32 event, void * eventParam);
 void UpdateNotificationCCCD(void);
+void UpdateConnectionParameters(void);
 void UpdateRGBled(void);
 void SendCapSenseNotification(uint8 CapSenseSliderData);
 

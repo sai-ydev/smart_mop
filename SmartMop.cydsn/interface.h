@@ -41,17 +41,8 @@
 
 
 /* Function prototypes */
-void StoreCalibration(void);
-void ProcessUprobe(void);
-void InitialUartMessage(void);
-void CalUartCommands(void);
-void CalUartMessage(void);
-void TestUartMessage(void);
-void ProcessUart(void);
-void TxIntNumber(int32 number, int8 leadingZeros);
-void TxIntFixedNumber(int32 number, uint8 fixedShift, uint8 numDecimal);
-cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 byteCount);
 
+void ProcessUprobe(void);
 
 /* Project Constants */
 /* uProbe constants */  

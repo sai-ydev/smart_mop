@@ -39,6 +39,8 @@
 *****************************************************************************/
 #include <project.h>
 #include <interface.h>
+#include "common_bmi270.h"
+#include "bmi270.h"
 #include <main.h>
 
 
@@ -53,7 +55,7 @@ uint8 modDivider = SENSOR_MODDIV;           /* Modulation clock divider */
 int32 sensorRaw[NUMSENSORS] = {0u};         /* Sensor raw counts */
 int32 sensorDiff[NUMSENSORS] = {0u};        /* Sensor difference counts */
 int16 sensorEmptyOffset[NUMSENSORS] = {0u}; /* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
-const int16 CYCODE eepromEmptyOffset[NUMSENSORS] = {0,1416,1728,2568,2656,1883,1888,1812,1915,2034,2095,896};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
+const int16 CYCODE eepromEmptyOffset[NUMSENSORS] = {0,1486,1864,2563,2680,1892,1905,1825,1904,2024,2086,884};/* Sensor counts when empty to calculate diff counts. Loaded from EEPROM array */
 int16 sensorScale[NUMSENSORS] = {0x01D0, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x0100, 0x01C0}; /* Scaling factor to normalize sensor full scale counts. 0x0100 = 1.0 in fixed precision 8.8 */
 int32 sensorProcessed[NUMSENSORS] = {0u, 0u}; /* fixed precision 24.8 */
 uint16 sensorLimit = SENSORLIMIT;           /* Threshold for determining if a sensor is submerged. Set to half of SENSORMAX value */
@@ -62,12 +64,19 @@ int32 previousLevelPercent = 0u;
 int32 levelPercent = 0u;                    /* fixed precision 24.8 */
 int32 levelMm = 0u;                         /* fixed precision 24.8 */   
 int32 sensorHeight = SENSORHEIGHT;          /* Height of a single sensor. Fixed precision 24.8 */
-uint8 calFlag = FALSE;                      /* Flag to signal when new sensor calibration values should be stored to EEPROM */
-/* Communication variables */
-uint16 delayMs = UART_DELAY;                /* Main loop delay in ms to control UART data log output speed */
+
+
+struct bmi2_sens_config config;
+struct bmi2_feat_sensor_data sensor_data = { 0 };
+uint8_t sens_list[2] = { BMI2_ACCEL, BMI2_SIG_MOTION };
+
+struct bmi2_dev bmi2_dev;
+struct bmi2_sens_int_config sens_int = { .type = BMI2_SIG_MOTION, .hw_int_pin = BMI2_INT1 };
+struct bmi2_int_pin_config int_cfg;
+int8_t rslt;
 
 static void InitializeSystem(void);
-
+CY_ISR_PROTO(Pin_BMI270);
 
 int main()
 {   
@@ -113,12 +122,7 @@ int main()
 		  /* Start scan for next iteration */
 		  CapSense_CSD_ScanEnabledWidgets();
 		
-		  /* Check if we should store new empty offset calibration values */
-		  if(calFlag == TRUE)
-		  {
-			  calFlag = FALSE;
-			  StoreCalibration();
-		  }
+		  
 		
 		  /* Remove empty offset calibration from sensor raw counts and normalize sensor full count values */
 		  for(i = 0; i < NUMSENSORS; i++)
@@ -159,7 +163,7 @@ int main()
 		
 		  /* Report level and process uProbe and UART interfaces */
 		  ProcessUprobe();
-		  ProcessUart();
+		  //ProcessUart();
 
 	    }
         
@@ -186,9 +190,46 @@ void InitializeSystem(void)
 	/* ADD_CODE to initialize CapSense component and initialize baselines*/
 	CapSense_CSD_Start();
 	CapSense_CSD_ScanEnabledWidgets();
-    UART_Start();
-    InitialUartMessage();
+    I2C_Start();
     
+    rslt = bmi2_interface_init(&bmi2_dev, BMI2_I2C_INTF);
+    
+    rslt = bmi270_init(&bmi2_dev);
+    
+    if(rslt == BMI2_OK){
+        
+        rslt = bmi270_sensor_enable(sens_list, 2, &bmi2_dev);
+        
+        if(rslt == BMI2_OK){
+            config.type = BMI2_SIG_MOTION;
+            rslt = bmi270_get_sensor_config(&config, 1, &bmi2_dev);
+            if(rslt == BMI2_OK){
+                
+                bmi2_get_int_pin_config(&int_cfg, &bmi2_dev);
+
+	            int_cfg.pin_type = BMI2_INT1;
+	            int_cfg.pin_cfg[0].lvl = BMI2_INT_ACTIVE_HIGH;/*Config INT1 rising edge trigging*/
+	            int_cfg.pin_cfg[0].od = BMI2_INT_PUSH_PULL;
+	            int_cfg.pin_cfg[0].output_en= BMI2_INT_OUTPUT_ENABLE;
+
+	            rslt = bmi2_set_int_pin_config(&int_cfg, &bmi2_dev);
+                if(rslt == BMI2_OK){
+                    bmi270_map_feat_int(&sens_int, 1, &bmi2_dev);
+                }
+                
+            }
+        }
+        
+    }
+    
+    BMI270_Interrupt_StartEx(Pin_BMI270);
+}
+
+CY_ISR(Pin_BMI270)
+{
+    /* Clear the pending interrupts */
+    BMI270_Interrupt_ClearPending();    
+    Pin_BMI270_ClearInterrupt();
 }
 
 

@@ -71,6 +71,7 @@ cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 b
 #define TRUE							(1)
 #define FALSE							(0)
 #define ZERO							(0)
+#define ONE                             (1)
 
 #define RGB_LED_MAX_VAL					(255)
 #define RGB_LED_OFF						(255)

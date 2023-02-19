@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#include "common.h"
+#include <I2C_I2C.h>
+#include "common_bmi270.h"
 #include "bmi2_defs.h"
 
 /******************************************************************************/
@@ -33,11 +33,9 @@ static uint8_t dev_addr;
 BMI2_INTF_RETURN_TYPE bmi2_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
 {
     uint8_t dev_addr = *(uint8_t*)intf_ptr;
-    uint8 I2CWriteBuffer[0x01] = {reg_addr}; //Location from which the calibration data is to be read
+    uint8_t I2CWriteBuffer[0x01] = {reg_addr}; //Location from which the calibration data is to be read
     
-    /* Do a write operation with the memory address bytes to get calibration data */
-	I2C_I2CMasterWriteBuf(dev_addr, 
-        I2CWriteBuffer, sizeof(I2CWriteBuffer), I2C_I2C_MODE_COMPLETE_XFER);
+    I2C_I2CMasterWriteBuf(dev_addr, I2CWriteBuffer, sizeof(I2CWriteBuffer), I2C_I2C_MODE_COMPLETE_XFER);
     while(!(I2C_I2CMasterStatus() & I2C_I2C_MSTAT_WR_CMPLT)); //Wait till the master completes writing
     I2C_I2CMasterClearStatus(); //Clear I2C master status
     
@@ -46,6 +44,7 @@ BMI2_INTF_RETURN_TYPE bmi2_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_
     I2C_I2CMasterClearStatus(); //Clear I2C master status
 
     return result;
+    
 }
 
 /*!
@@ -62,7 +61,7 @@ BMI2_INTF_RETURN_TYPE bmi2_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, 
     while(!(I2C_I2CMasterStatus() & I2C_I2C_MSTAT_WR_CMPLT)); //Wait till the master completes writing
     I2C_I2CMasterClearStatus(); //Clear I2C master status
     
-    return result;    
+    return result;       
 }
 
 
@@ -71,7 +70,7 @@ BMI2_INTF_RETURN_TYPE bmi2_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, 
  */
 void bmi2_delay_us(uint32_t period, void *intf_ptr)
 {
-    CyDelayUs(period);
+   CyDelayUs(period);
 }
 
 /*!
