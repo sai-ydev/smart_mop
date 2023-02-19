@@ -60,13 +60,13 @@
 #define CAPSENSE_SLIDER_CHAR_INDEX      (0x00)
 #define RGB_LED_CHAR_INDEX              (0x00)
 #define CAPSENSE_SLIDER_CHAR_HANDLE		(0x000E)
-#define RGB_LED_CHAR_HANDLE				(0x0013)
+
 
 #define CAPSENSE_CCC_HANDLE				(0x000F)
 
 #define CCC_DATA_LEN					(2)
 #define CAPSENSE_CHAR_DATA_LEN			(1)
-#define RGB_CHAR_DATA_LEN				(4)
+
 
 #define CAPSENSE_SLIDER_CCC_INDEX		(0u)
 #define CCC_DATA_INDEX					(0u)
@@ -94,9 +94,9 @@ extern uint8 sendCapSenseSliderNotifications;
 * Public functions
 *****************************************************************************/
 void CustomEventHandler(uint32 event, void * eventParam);
-void UpdateNotificationCCCD(void);
+void UpdateNotificationCCCDAttribute(void);
 void UpdateConnectionParameters(void);
-void UpdateRGBled(void);
+
 void SendCapSenseNotification(uint8 CapSenseSliderData);
 
 

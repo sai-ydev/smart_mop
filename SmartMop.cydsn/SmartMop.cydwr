@@ -869,7 +869,7 @@
         <Data key="netlist_name" value="\I2C:SCBCLK\" />
         <Data key="ph_align_clock_id" value="413DE2EF-D9F2-4233-A808-DFAF137FD877" />
         <Data key="ph_align_clock_name" value="HFCLK" />
-        <Data key="plus_tolerance" value="725.80645161290317" />
+        <Data key="plus_tolerance" value="106.45161290322579" />
         <Data key="scope" value="LOCAL" />
         <Data key="sourceClk_minus_acuracy_name" value="2" />
         <Data key="sourceClk_plus_acuracy_name" value="2" />
@@ -1019,7 +1019,7 @@
         <Data key="sourceClk_plus_acuracy_name" value="0.015" />
         <Data key="src_clk_id" value="238B4C77-851C-44d4-8040-C396F09E3440" />
         <Data key="src_clk_name" value="WCO" />
-        <Data key="start_on_reset" value="True" />
+        <Data key="start_on_reset" value="False" />
       </Group>
       <Group key="13A80296-70D5-4f89-B0D3-510602484A50">
         <Data key="check_tolerance" value="False" />
@@ -1294,7 +1294,7 @@
         <Data key="desired_unit" value="3" />
         <Data key="divider" value="0" />
         <Data key="enabled" value="True" />
-        <Data key="generate_isr" value="True" />
+        <Data key="generate_isr" value="False" />
         <Data key="minus_tolerance" value="0" />
         <Data key="name" value="Timer (WDT) ISR" />
         <Data key="netlist_name" value="Timer (WDT) ISR" />

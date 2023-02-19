@@ -82,7 +82,11 @@ cystatus Em_EEPROM_Write(const uint8 srcBuf[], const uint8 eepromPtr[], uint32 b
 #define Em_EEPROM_FLASH_END_ADDR         (Em_EEPROM_FLASH_BASE_ADDR + Em_EEPROM_FLASH_SIZE)
 #define Em_EEPROM_ROWS_IN_ARRAY          (CY_FLASH_SIZEOF_ARRAY/CY_FLASH_SIZEOF_ROW)
 
+/* Adjust WDT time */
+#define WDT_MATCH_VALUE_30MS		(32 * 30) //30ms (IL0~32K)
+#define WDT_MATCH_VALUE_200MS		(32 * 200) //200ms (IL0~32K)
 
-
+#define SLEEP_30MS 0x01
+#define SLEEP_200MS 0x02
 
 /* [] END OF FILE */

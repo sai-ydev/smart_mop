@@ -43,6 +43,10 @@
 #include "bmi270.h"
 #include <main.h>
 
+/*************************Macro Definitions**********************************/
+#define LED_DELAY_COUNT 0x32 //Counter value for LED Delay
+#define NOTIFICATION_DELAY_COUNT 0x20 //Counter value for Notification Delay
+/*****************************************************************************/
 
 /* Global variables */
 /* Global variables used because this is the method uProbe uses to access firmware data */
@@ -51,6 +55,15 @@ uint8 modDac = SENSOR_MODDAC;               /* Modulation DAC current setting */
 uint8 compDac[NUMSENSORS] = {SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC, SENSOR_CMPDAC}; /* Compensation DAC current setting */
 uint8 senseDivider = SENSOR_SENDIV;         /* Sensor clock divider */
 uint8 modDivider = SENSOR_MODDIV;           /* Modulation clock divider */
+uint8 NotificationDelayCounter = NOTIFICATION_DELAY_COUNT; //Counter to handle the periodic notification
+uint8 LEDDelayCounter = LED_DELAY_COUNT; //Counter to handle the LED blinking
+extern long LastCapSenseData;
+extern uint8 StartAdvertisement; //This flag is used to start advertisement
+extern uint8 DeviceConnected; //This flag is set when a Central device is connected
+extern uint8 CapSenseNotificationEnabled; //This flag is set when the Central device writes to CCCD to enable temperature notification
+extern uint8 CapSenseNotificationData; //The temperature notification value is stored in this array
+static CYBLE_LP_MODE_T SleepMode; //Variable to store the status of BLESS Hardware block
+static CYBLE_BLESS_STATE_T BlessState; //Variable to store the status of BLESS Hardware block
 /* Liquid Level variables */
 int32 sensorRaw[NUMSENSORS] = {0u};         /* Sensor raw counts */
 int32 sensorDiff[NUMSENSORS] = {0u};        /* Sensor difference counts */
@@ -64,7 +77,8 @@ int32 previousLevelPercent = 0u;
 int32 levelPercent = 0u;                    /* fixed precision 24.8 */
 int32 levelMm = 0u;                         /* fixed precision 24.8 */   
 int32 sensorHeight = SENSORHEIGHT;          /* Height of a single sensor. Fixed precision 24.8 */
-
+/* This variable is used to generate required WDT interrupt period */ 
+uint32 ILODelayCycles = WDT_MATCH_VALUE_200MS;
 
 struct bmi2_sens_config config;
 struct bmi2_feat_sensor_data sensor_data = { 0 };
@@ -74,99 +88,58 @@ struct bmi2_dev bmi2_dev;
 struct bmi2_sens_int_config sens_int = { .type = BMI2_SIG_MOTION, .hw_int_pin = BMI2_INT1 };
 struct bmi2_int_pin_config int_cfg;
 int8_t rslt;
+uint8 i;
 
 static void InitializeSystem(void);
+void ReadSensorDataAndNotify(void);
+void HandleStatusLED(void);
+void EnterExitLowPowerMode(void);
 CY_ISR_PROTO(Pin_BMI270);
+CY_ISR_PROTO (WDT_ISR);
 
 int main()
 {   
     InitializeSystem();
-    uint8 i;
+    
     while(1u)
     {
         CyBle_ProcessEvents();
         
-        if(TRUE == deviceConnected)
-		{
-            /* When the Client Characteristic Configuration descriptor (CCCD) is
-             * written by Central device for enabling/disabling notifications, 
-             * then the same descriptor value has to be explicitly updated in 
-             * application so that it reflects the correct value when the 
-             * descriptor is read */
-			UpdateNotificationCCCD();
-			
-			/* Send CapSense Slider data when respective notification is enabled */
-			if(TRUE == sendCapSenseSliderNotifications)
-			{
-				/* Check for CapSense slider swipe and send data accordingly */
+        HandleStatusLED();
+        
+        if(DeviceConnected)
+        {
+            UpdateConnectionParameters();
+            UpdateNotificationCCCDAttribute();
+            
+            if(--NotificationDelayCounter == ZERO)
+            {
+                NotificationDelayCounter = NOTIFICATION_DELAY_COUNT; //Reset the notification counter
                 if(levelPercent != previousLevelPercent)
                 {
                     previousLevelPercent = levelPercent;
                     SendCapSenseNotification(levelPercent>>8);
+                    
                 }
-			}
-		}
-
+            }
+            
+            
+        }
         
-        /* Can do other main loop stuff here */
-        /* Check for CapSense scan complete*/
-	    if(CapSense_CSD_IsBusy() == FALSE)
-	    {
-            /* Read and store new sensor raw counts*/
-		    for(i = 0; i < NUMSENSORS; i++)
-            {
-			  sensorRaw[i] = CapSense_CSD_ReadSensorRaw(i);
-			  sensorDiff[i] = sensorRaw[i];
-		    }
-
-		  /* Start scan for next iteration */
-		  CapSense_CSD_ScanEnabledWidgets();
-		
-		  
-		
-		  /* Remove empty offset calibration from sensor raw counts and normalize sensor full count values */
-		  for(i = 0; i < NUMSENSORS; i++)
-		  {
-			  sensorDiff[i] -= sensorEmptyOffset[i];
-			  sensorProcessed[i] = (sensorDiff[i] * sensorScale[i]) >> 8;
-		  }
-					
-		  /* Find the number of submerged sensors */
-		  sensorActiveCount = 0;
-		  for(i = 0; i < NUMSENSORS; i++)
-		  {
-			  if(sensorProcessed[i] > sensorLimit)
-			  {
-				  /* First and last sensor are half the height of middle sensors */
-				  if((i == 0) || (i == NUMSENSORS - 1))
-				  {
-					  sensorActiveCount += 1;
-				  }
-				  /* Middle sensors are twice the height of 1st and last sensors */
-				  else
-				  {
-					  sensorActiveCount += 2;
-				  }
-			  }
-		  }
-		
-		  /* Calculate liquid level height in mm */
-		  levelMm = sensorActiveCount * (sensorHeight >> 1);
-		  /* If level is near full value then round to full. Avoids fixed precision rounding errors */
-		  if(levelMm > ((int32)LEVELMM_MAX << 8) - (sensorHeight >> 2))
-		  {
-			  levelMm = LEVELMM_MAX << 8;
-		  }
-
-		  /* Calculate level percent. Stored in fixed precision 24.8 format to hold fractional percent */
-		  levelPercent = (levelMm * 100) / LEVELMM_MAX;
-		
-		  /* Report level and process uProbe and UART interfaces */
-		  ProcessUprobe();
-		  //ProcessUart();
-
-	    }
+        //EnterExitLowPowerMode();
         
+        ReadSensorDataAndNotify();
+        
+        if(StartAdvertisement)
+        {
+            StartAdvertisement = FALSE; //Clear the advertisement flag
+            
+            CyBle_GappStartAdvertisement(CYBLE_ADVERTISING_FAST); //Start advertisement and enter Discoverable mode
+            
+            LED_Write(ZERO); //Turn on the status LED
+            LED_SetDriveMode(LED_DM_STRONG); //Set the LED pin drive mode to Strong
+        }
+
     }
 }
 
@@ -225,12 +198,176 @@ void InitializeSystem(void)
     BMI270_Interrupt_StartEx(Pin_BMI270);
 }
 
+/*************************************************************************************************************************
+* Function Name: HandleStatusLED
+**************************************************************************************************************************
+* Summary: This function controls the status LED depending upon the BLE state.
+*
+* Parameters:
+*  void
+*
+* Return:
+*  void
+*
+*************************************************************************************************************************/
+void HandleStatusLED(void)
+{
+    /* Check whether the device is advertising and blink the LED */
+    if(CyBle_GetState() == CYBLE_STATE_ADVERTISING)
+    {
+        if(--LEDDelayCounter == ZERO)
+        {
+            LEDDelayCounter = LED_DELAY_COUNT; //Reset the LED state counter
+            LED_Write(!LED_Read()); //Toggle the status LED when the counter is reset
+        }
+    }    
+    else
+    {
+        LED_Write(ONE); //Turn off the status LED
+        LED_SetDriveMode(LED_DM_ALG_HIZ); //Set the LED pin drive mode to Hi-Z
+    }
+}
+
+/*************************************************************************************************************************
+* Function Name: ReadSensorDataAndNotify
+**************************************************************************************************************************
+* Summary: This function checks whether any of the notifications is enabled and sends the sensor data as BLE notification.
+* If any notification is enabled and the sensor data has changed from the previous readings, it sends the notification.
+*
+* Parameters:
+*  void
+*
+* Return:
+*  void
+*
+*************************************************************************************************************************/
+void ReadSensorDataAndNotify(void)
+{
+    /* Start sensor data processing if any notification is enabled */
+    if(CapSenseNotificationEnabled)
+    {
+        /* Can do other main loop stuff here */
+        /* Check for CapSense scan complete*/
+	    if(CapSense_CSD_IsBusy() == FALSE)
+	    {
+            /* Read and store new sensor raw counts*/
+		    for(i = 0; i < NUMSENSORS; i++)
+            {
+			  sensorRaw[i] = CapSense_CSD_ReadSensorRaw(i);
+			  sensorDiff[i] = sensorRaw[i];
+		    }
+
+		  /* Start scan for next iteration */
+		  CapSense_CSD_ScanEnabledWidgets();
+		
+		  
+		
+		  /* Remove empty offset calibration from sensor raw counts and normalize sensor full count values */
+		  for(i = 0; i < NUMSENSORS; i++)
+		  {
+			  sensorDiff[i] -= sensorEmptyOffset[i];
+			  sensorProcessed[i] = (sensorDiff[i] * sensorScale[i]) >> 8;
+		  }
+					
+		  /* Find the number of submerged sensors */
+		  sensorActiveCount = 0;
+		  for(i = 0; i < NUMSENSORS; i++)
+		  {
+			  if(sensorProcessed[i] > sensorLimit)
+			  {
+				  /* First and last sensor are half the height of middle sensors */
+				  if((i == 0) || (i == NUMSENSORS - 1))
+				  {
+					  sensorActiveCount += 1;
+				  }
+				  /* Middle sensors are twice the height of 1st and last sensors */
+				  else
+				  {
+					  sensorActiveCount += 2;
+				  }
+			  }
+		  }
+		
+		  /* Calculate liquid level height in mm */
+		  levelMm = sensorActiveCount * (sensorHeight >> 1);
+		  /* If level is near full value then round to full. Avoids fixed precision rounding errors */
+		  if(levelMm > ((int32)LEVELMM_MAX << 8) - (sensorHeight >> 2))
+		  {
+			  levelMm = LEVELMM_MAX << 8;
+		  }
+
+		  /* Calculate level percent. Stored in fixed precision 24.8 format to hold fractional percent */
+		  levelPercent = (levelMm * 100) / LEVELMM_MAX;
+		
+		  /* Report level and process uProbe and UART interfaces */
+		  ProcessUprobe();
+		  //ProcessUart();
+        
+          
+	    }
+        
+    }
+    
+   
+    
+    
+}
+/***********************************************************************************************************************/
+
+/*************************************************************************************************************************
+* Function Name: EnterExitLowPowerMode
+**************************************************************************************************************************
+* Summary: This function puts the BLESS and CPU to deep sleep mode. 
+* System will resume from here when it wakes up from user button press.
+*
+* Parameters:
+*  void
+*
+* Return:
+*  void
+*
+*************************************************************************************************************************/
+void EnterExitLowPowerMode(void)
+{
+	I2C_Sleep(); //Put I2C to sleep
+    
+    CapSense_CSD_Sleep();
+	
+	SleepMode = CyBle_EnterLPM(CYBLE_BLESS_DEEPSLEEP); //Put the BLESS to sleep
+    
+    CyGlobalIntDisable; //Disable global interrupts
+    
+    BlessState = CyBle_GetBleSsState(); //Check the Status of BLESS
+    
+    if(SleepMode == CYBLE_BLESS_DEEPSLEEP)
+    {
+        if(BlessState == CYBLE_BLESS_STATE_ECO_ON || BlessState == CYBLE_BLESS_STATE_DEEPSLEEP)
+        {
+            CySysPmDeepSleep(); //Put the CPU to Deep Sleep mode when the ECO has started
+        }
+    }
+    else
+    {    
+        if(BlessState != CYBLE_BLESS_STATE_EVENT_CLOSE)
+        {
+            CySysPmSleep(); //Put the CPU to Sleep mode if all the BLE events are not closed
+        }
+    }
+    
+    CyGlobalIntEnable; //Enable global interrupts
+    
+    CapSense_CSD_Start();
+    
+    I2C_Wakeup(); //Wakeup the I2C
+}
 CY_ISR(Pin_BMI270)
 {
     /* Clear the pending interrupts */
     BMI270_Interrupt_ClearPending();    
     Pin_BMI270_ClearInterrupt();
 }
+
+
 
 
 /* [] END OF FILE */
