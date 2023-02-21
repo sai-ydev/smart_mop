@@ -54,6 +54,7 @@ uint8 UpdateCapSenseNotificationAttribute = FALSE; //This flags is used to updat
 uint8 CapSenseNotificationCCCDValue[0x02];
 extern int32 previousLevelPercent;
 extern int32 levelPercent;
+
 /*****************************************************************************
 * Static variables 
 *****************************************************************************/
@@ -87,7 +88,7 @@ void CustomEventHandler(uint32 Event, void *EventParameter)
         *                       General Events
         ***********************************************************/
 		case CYBLE_EVT_STACK_ON: //This event is received when the BLE component is started			
-            StartAdvertisement = TRUE; //Set the advertisement flag
+            //StartAdvertisement = TRUE; //Set the advertisement flag
 		break;
             
         case CYBLE_EVT_STACK_BUSY_STATUS: //This event is generated when the internal stack buffer is full and no more data can be accepted or the stack has buffer available and can accept data
@@ -100,12 +101,12 @@ void CustomEventHandler(uint32 Event, void *EventParameter)
         case CYBLE_EVT_GAPP_ADVERTISEMENT_START_STOP: //This event is received when the device starts or stops advertising
             if(CyBle_GetState() == CYBLE_STATE_DISCONNECTED)
             {
-                StartAdvertisement = TRUE; //Set the advertisement flag
+                //StartAdvertisement = TRUE; //Set the advertisement flag
             }
         break;
 			
 		case CYBLE_EVT_GAP_DEVICE_DISCONNECTED: //This event is received when the device is disconnected
-			StartAdvertisement = TRUE; //Set the advertisement flag
+			//StartAdvertisement = TRUE; //Set the advertisement flag
         break;
 
         /**********************************************************
@@ -122,8 +123,8 @@ void CustomEventHandler(uint32 Event, void *EventParameter)
 			DeviceConnected = FALSE; //Clear device connection status flag
             CapSenseNotificationEnabled = FALSE;
             UpdateCapSenseNotificationAttribute = TRUE;
-            
-            
+            previousLevelPercent = ZERO;
+            levelPercent = ZERO;
             ConnectionParametersUpdateRequired = TRUE; //Set the Connection Parameters Update flag
             UpdateNotificationCCCDAttribute(); //Update the CCCD writing by the Central device
 		break;
